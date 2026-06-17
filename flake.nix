@@ -17,8 +17,7 @@
           pname = "reelsieve";
           inherit version;
           src = ./.;
-          vendorHash = "sha256-udFoywpttlhoOUwiy65g7Y5jhx+TcnHywbiYsEUk5vI=";
-          proxyVendor = true;
+          vendorHash = "sha256-Xlgq9cwsOmEWwZdnszZT0IM0ODNfI1NE3JgzHse3grM=";
           subPackages = [ "cmd/reelsieve" ];
           ldflags = [
             "-s"
