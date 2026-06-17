@@ -1,4 +1,4 @@
-module github.com/omega/reelsieve
+module github.com/pbek/reelsieve
 
 go 1.26
 

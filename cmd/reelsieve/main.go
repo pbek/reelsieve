@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/omega/reelsieve/internal/rssfilter"
+	"github.com/pbek/reelsieve/internal/rssfilter"
 )
 
 var version = "0.1"
