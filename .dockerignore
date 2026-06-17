@@ -1,0 +1,6 @@
+.git
+.direnv
+result
+tmp
+*.log
+.devenv

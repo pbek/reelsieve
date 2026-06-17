@@ -1,0 +1,19 @@
+.direnv/
+result
+dist/
+*.log
+bin
+
+.shared
+
+# Devenv
+.devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
