@@ -1,6 +1,6 @@
 # ReelSieve
 
-ReelSieve is a small RSS filtering service for movie feeds. It reads the upstream feed configured by `SOURCE_URL`, keeps items with an IMDB rating of at least `5`, removes duplicate movie names, and serves the result as RSS.
+ReelSieve is a small RSS filtering service for movie feeds. It reads the upstream feed configured by `SOURCE_URL`, keeps items with an IMDB rating of at least `5`, stores fetched item keys in SQLite, removes duplicate movie names, and serves the result as RSS.
 
 Version: `0.1`
 
@@ -15,13 +15,15 @@ Open `http://localhost:8080/rss`.
 
 ## Configuration
 
-| Variable          | Default  | Description                   |
-| ----------------- | -------- | ----------------------------- |
-| `LISTEN_ADDR`     | `:8080`  | HTTP listen address           |
-| `SOURCE_URL`      | required | Upstream RSS URL              |
-| `MIN_RATING`      | `5`      | Minimum IMDB rating           |
-| `CACHE_TTL`       | `10m`    | In-memory feed cache duration |
-| `REQUEST_TIMEOUT` | `10s`    | Upstream request timeout      |
+| Variable                | Default             | Description                                                |
+| ----------------------- | ------------------- | ---------------------------------------------------------- |
+| `LISTEN_ADDR`           | `:8080`             | HTTP listen address                                        |
+| `SOURCE_URL`            | required            | Upstream RSS URL                                           |
+| `MIN_RATING`            | `5`                 | Minimum IMDB rating                                        |
+| `CACHE_TTL`             | `10m`               | In-memory feed cache duration                              |
+| `REQUEST_TIMEOUT`       | `10s`               | Upstream request timeout                                   |
+| `FETCHED_ITEMS_DB_PATH` | `reelsieve.sqlite3` | SQLite database path for fetched item history              |
+| `FETCHED_ITEMS_LIMIT`   | `500`               | Number of fetched item keys to retain for duplicate checks |
 
 ## Endpoints
 

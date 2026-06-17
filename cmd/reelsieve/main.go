@@ -23,7 +23,17 @@ func main() {
 	}
 
 	client := &http.Client{Timeout: cfg.requestTimeout}
-	service := rssfilter.NewService(client, cfg.sourceURL, cfg.minRating, cfg.cacheTTL)
+	store, err := rssfilter.OpenItemStore(cfg.fetchedItemsDBPath, cfg.fetchedItemsLimit)
+	if err != nil {
+		slog.Error("failed to open fetched item database", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			slog.Error("failed to close fetched item database", "error", err)
+		}
+	}()
+	service := rssfilter.NewService(client, cfg.sourceURL, cfg.minRating, cfg.cacheTTL, store)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /rss", func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +68,21 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	slog.Info("starting reelsieve", "version", version, "addr", cfg.listenAddr, "source", cfg.sourceURL, "min_rating", cfg.minRating)
+	slog.Info(
+		"starting reelsieve",
+		"version",
+		version,
+		"addr",
+		cfg.listenAddr,
+		"source",
+		cfg.sourceURL,
+		"min_rating",
+		cfg.minRating,
+		"fetched_items_db",
+		cfg.fetchedItemsDBPath,
+		"fetched_items_limit",
+		cfg.fetchedItemsLimit,
+	)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)
@@ -66,19 +90,23 @@ func main() {
 }
 
 type config struct {
-	listenAddr     string
-	sourceURL      string
-	minRating      float64
-	cacheTTL       time.Duration
-	requestTimeout time.Duration
+	listenAddr         string
+	sourceURL          string
+	minRating          float64
+	cacheTTL           time.Duration
+	requestTimeout     time.Duration
+	fetchedItemsDBPath string
+	fetchedItemsLimit  int
 }
 
 func loadConfig() (config, error) {
 	cfg := config{
-		listenAddr:     getEnv("LISTEN_ADDR", ":8080"),
-		minRating:      5,
-		cacheTTL:       10 * time.Minute,
-		requestTimeout: 10 * time.Second,
+		listenAddr:         getEnv("LISTEN_ADDR", ":8080"),
+		minRating:          5,
+		cacheTTL:           10 * time.Minute,
+		requestTimeout:     10 * time.Second,
+		fetchedItemsDBPath: getEnv("FETCHED_ITEMS_DB_PATH", "reelsieve.sqlite3"),
+		fetchedItemsLimit:  500,
 	}
 
 	cfg.sourceURL = os.Getenv("SOURCE_URL")
@@ -106,6 +134,16 @@ func loadConfig() (config, error) {
 			return cfg, fmt.Errorf("REQUEST_TIMEOUT: %w", err)
 		}
 		cfg.requestTimeout = parsed
+	}
+	if value := os.Getenv("FETCHED_ITEMS_LIMIT"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return cfg, fmt.Errorf("FETCHED_ITEMS_LIMIT: %w", err)
+		}
+		cfg.fetchedItemsLimit = parsed
+	}
+	if cfg.fetchedItemsLimit <= 0 {
+		return cfg, errors.New("FETCHED_ITEMS_LIMIT must be greater than zero")
 	}
 
 	return cfg, nil

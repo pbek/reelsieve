@@ -1,6 +1,10 @@
 package rssfilter
 
-import "testing"
+import (
+	"context"
+	"path/filepath"
+	"testing"
+)
 
 func TestIMDBRating(t *testing.T) {
 	rating, ok := IMDBRating(`<br />IMDB Rating: 5.6/10<br />Genre: Thriller`)
@@ -33,9 +37,76 @@ func TestFilterItems(t *testing.T) {
 	}
 }
 
+func TestFilterItemsSkipsStoredItems(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t, 500)
+	defer func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	}()
+
+	if err := store.RecordFetched(ctx, []Item{{Title: "Old Movie (2026) [1080p]", GUID: "old"}}); err != nil {
+		t.Fatalf("RecordFetched: %v", err)
+	}
+
+	service := &Service{minRating: 5, store: store}
+	filtered, err := service.filterItems(ctx, []Item{
+		{Title: "Old Movie (2026) [BluRay]", Description: "IMDB Rating: 7.0/10", GUID: "1"},
+		{Title: "New Movie (2026) [1080p]", Description: "IMDB Rating: 7.1/10", GUID: "2"},
+		{Title: "New Movie (2026) [BluRay]", Description: "IMDB Rating: 8.1/10", GUID: "3"},
+	})
+	if err != nil {
+		t.Fatalf("filterItems: %v", err)
+	}
+	if len(filtered) != 1 {
+		t.Fatalf("len(filtered) = %d, want 1", len(filtered))
+	}
+	if filtered[0].GUID != "2" {
+		t.Fatalf("GUID = %q, want 2", filtered[0].GUID)
+	}
+}
+
+func TestItemStorePrunesToLimit(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t, 2)
+	defer func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	}()
+
+	for _, item := range []Item{
+		{Title: "One", GUID: "1"},
+		{Title: "Two", GUID: "2"},
+		{Title: "Three", GUID: "3"},
+	} {
+		if err := store.RecordFetched(ctx, []Item{item}); err != nil {
+			t.Fatalf("RecordFetched: %v", err)
+		}
+	}
+
+	var count int
+	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM fetched_items`).Scan(&count); err != nil {
+		t.Fatalf("count fetched items: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("count = %d, want 2", count)
+	}
+}
+
 func TestNormalizedName(t *testing.T) {
 	name := NormalizedName(Item{Title: "Empire of Lies (2026) [1080p] [WEBRip] [x265]"})
 	if name != "empire of lies (2026)" {
 		t.Fatalf("name = %q, want empire of lies (2026)", name)
 	}
+}
+
+func openTestStore(t *testing.T, limit int) *ItemStore {
+	t.Helper()
+	store, err := OpenItemStore(filepath.Join(t.TempDir(), "items.sqlite3"), limit)
+	if err != nil {
+		t.Fatalf("OpenItemStore: %v", err)
+	}
+	return store
 }

@@ -24,14 +24,27 @@ type Service struct {
 	sourceURL string
 	minRating float64
 	cacheTTL  time.Duration
+	store     *ItemStore
 
 	mu        sync.RWMutex
 	cached    RSS
 	expiresAt time.Time
 }
 
-func NewService(client *http.Client, sourceURL string, minRating float64, cacheTTL time.Duration) *Service {
-	return &Service{client: client, sourceURL: sourceURL, minRating: minRating, cacheTTL: cacheTTL}
+func NewService(
+	client *http.Client,
+	sourceURL string,
+	minRating float64,
+	cacheTTL time.Duration,
+	store *ItemStore,
+) *Service {
+	return &Service{
+		client:    client,
+		sourceURL: sourceURL,
+		minRating: minRating,
+		cacheTTL:  cacheTTL,
+		store:     store,
+	}
 }
 
 func (s *Service) Feed(ctx context.Context) (RSS, error) {
@@ -54,7 +67,17 @@ func (s *Service) Feed(ctx context.Context) (RSS, error) {
 	if err != nil {
 		return RSS{}, err
 	}
-	feed.Channel.Items = FilterItems(feed.Channel.Items, s.minRating)
+	fetchedItems := feed.Channel.Items
+	filteredItems, err := s.filterItems(ctx, fetchedItems)
+	if err != nil {
+		return RSS{}, err
+	}
+	feed.Channel.Items = filteredItems
+	if s.store != nil {
+		if err := s.store.RecordFetched(ctx, fetchedItems); err != nil {
+			return RSS{}, err
+		}
+	}
 	if feed.Channel.Title != "" {
 		feed.Channel.Title = "ReelSieve - " + feed.Channel.Title
 	}
@@ -79,7 +102,9 @@ func (s *Service) fetch(ctx context.Context) (RSS, error) {
 	if err != nil {
 		return RSS{}, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, res.Body)
 		return RSS{}, fmt.Errorf("upstream returned %s", res.Status)
@@ -96,6 +121,34 @@ func (s *Service) fetch(ctx context.Context) (RSS, error) {
 	return feed, nil
 }
 
+func (s *Service) filterItems(ctx context.Context, items []Item) ([]Item, error) {
+	filtered := make([]Item, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		rating, ok := IMDBRating(item.Description)
+		if !ok || rating < s.minRating {
+			continue
+		}
+
+		key := ItemKey(item)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		if s.store != nil {
+			exists, err := s.store.Seen(ctx, key)
+			if err != nil {
+				return nil, err
+			}
+			if exists {
+				continue
+			}
+		}
+		seen[key] = struct{}{}
+		filtered = append(filtered, item)
+	}
+	return filtered, nil
+}
+
 func FilterItems(items []Item, minRating float64) []Item {
 	filtered := make([]Item, 0, len(items))
 	seen := make(map[string]struct{}, len(items))
@@ -105,17 +158,22 @@ func FilterItems(items []Item, minRating float64) []Item {
 			continue
 		}
 
-		name := NormalizedName(item)
-		if name == "" {
-			name = strings.ToLower(strings.TrimSpace(item.GUID))
-		}
-		if _, exists := seen[name]; exists {
+		key := ItemKey(item)
+		if _, exists := seen[key]; exists {
 			continue
 		}
-		seen[name] = struct{}{}
+		seen[key] = struct{}{}
 		filtered = append(filtered, item)
 	}
 	return filtered
+}
+
+func ItemKey(item Item) string {
+	name := NormalizedName(item)
+	if name == "" {
+		name = strings.ToLower(strings.TrimSpace(item.GUID))
+	}
+	return name
 }
 
 func IMDBRating(description string) (float64, bool) {
