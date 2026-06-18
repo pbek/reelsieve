@@ -84,7 +84,7 @@ jobs:
         run: |
           version="${{ steps.version.outputs.version }}"
           awk -v version="${version}" '
-            $0 ~ "^##[[:space:]]+" version "([[:space:]]+-|[[:space:]]*$)" { found = 1; next }
+            $0 ~ "^##[[:space:]]+\\[?v?" version "\\]?([[:space:]]+-|[[:space:]]*$)" { found = 1; next }
             found && /^##[[:space:]]+/ { exit }
             found { print }
             END { exit found ? 0 : 1 }
