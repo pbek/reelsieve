@@ -20,7 +20,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go test ./...
-      - run: go build -trimpath -ldflags="-s -w -X main.version=0.1" ./cmd/reelsieve
+      - run: go build -trimpath -ldflags="-s -w -X main.version=0.2" ./cmd/reelsieve
 
   docker:
     name: "🐳 Docker"
@@ -34,7 +34,7 @@ jobs:
           push: false
           tags: reelsieve:ci
           build-args: |
-            VERSION=0.1
+            VERSION=0.2
 
   nix:
     name: "❄️ Nix"

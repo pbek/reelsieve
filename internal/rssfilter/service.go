@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -95,7 +96,7 @@ func (s *Service) fetch(ctx context.Context) (RSS, error) {
 	if err != nil {
 		return RSS{}, err
 	}
-	req.Header.Set("User-Agent", "reelsieve/0.1")
+	req.Header.Set("User-Agent", "reelsieve/0.2")
 	req.Header.Set("Accept", "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8")
 
 	res, err := s.client.Do(req)
@@ -144,6 +145,7 @@ func (s *Service) filterItems(ctx context.Context, items []Item) ([]Item, error)
 			}
 		}
 		seen[key] = struct{}{}
+		item = AddIMDBSearchLink(item)
 		filtered = append(filtered, item)
 	}
 	return filtered, nil
@@ -163,9 +165,35 @@ func FilterItems(items []Item, minRating float64) []Item {
 			continue
 		}
 		seen[key] = struct{}{}
+		item = AddIMDBSearchLink(item)
 		filtered = append(filtered, item)
 	}
 	return filtered
+}
+
+func AddIMDBSearchLink(item Item) Item {
+	query := SearchTitle(item)
+	if query == "" || strings.Contains(item.Description, "imdb.com/find/") {
+		return item
+	}
+
+	link := "https://www.imdb.com/find/?q=" + url.QueryEscape(query) + "&s=tt"
+	separator := ""
+	if strings.TrimSpace(item.Description) != "" {
+		separator = "<br />"
+	}
+	item.Description += separator + `IMDb: <a href="` + link + `">Search IMDb</a>`
+	return item
+}
+
+func SearchTitle(item Item) string {
+	title := strings.TrimSpace(item.Title)
+	if title == "" {
+		title = strings.TrimSpace(item.Link)
+	}
+	title = bracketGroup.ReplaceAllString(title, "")
+	title = spacePattern.ReplaceAllString(title, " ")
+	return strings.TrimSpace(title)
 }
 
 func ItemKey(item Item) string {

@@ -3,6 +3,7 @@ package rssfilter
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,6 +35,12 @@ func TestFilterItems(t *testing.T) {
 	}
 	if filtered[1].GUID != "5" {
 		t.Fatalf("second GUID = %q, want 5", filtered[1].GUID)
+	}
+	if !strings.Contains(
+		filtered[0].Description,
+		`https://www.imdb.com/find/?q=A+Movie+%282026%29&s=tt`,
+	) {
+		t.Fatalf("description = %q, want IMDb search link", filtered[0].Description)
 	}
 }
 
@@ -99,6 +106,22 @@ func TestNormalizedName(t *testing.T) {
 	name := NormalizedName(Item{Title: "Empire of Lies (2026) [1080p] [WEBRip] [x265]"})
 	if name != "empire of lies (2026)" {
 		t.Fatalf("name = %q, want empire of lies (2026)", name)
+	}
+}
+
+func TestAddIMDBSearchLink(t *testing.T) {
+	item := AddIMDBSearchLink(Item{
+		Title:       "Empire of Lies (2026) [1080p] [WEBRip] [x265]",
+		Description: "IMDB Rating: 7.1/10",
+	})
+	want := `IMDB Rating: 7.1/10<br />IMDb: <a href="https://www.imdb.com/find/?q=Empire+of+Lies+%282026%29&s=tt">Search IMDb</a>`
+	if item.Description != want {
+		t.Fatalf("description = %q, want %q", item.Description, want)
+	}
+
+	again := AddIMDBSearchLink(item)
+	if again.Description != want {
+		t.Fatalf("description = %q, want no duplicate IMDb link", again.Description)
 	}
 }
 
