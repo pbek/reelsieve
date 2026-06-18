@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pbek/reelsieve/internal/version"
 )
 
 var (
@@ -96,7 +98,7 @@ func (s *Service) fetch(ctx context.Context) (RSS, error) {
 	if err != nil {
 		return RSS{}, err
 	}
-	req.Header.Set("User-Agent", "reelsieve/0.2")
+	req.Header.Set("User-Agent", "reelsieve/"+version.String())
 	req.Header.Set("Accept", "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8")
 
 	res, err := s.client.Do(req)

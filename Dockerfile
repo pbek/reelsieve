@@ -1,12 +1,11 @@
 FROM golang:1.26-alpine AS build
 
-ARG VERSION=0.1
 WORKDIR /src
 COPY go.mod ./
 COPY go.sum ./
 COPY cmd ./cmd
 COPY internal ./internal
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/reelsieve ./cmd/reelsieve && mkdir -p /out/data && chown 65532:65532 /out/data
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reelsieve ./cmd/reelsieve && mkdir -p /out/data && chown 65532:65532 /out/data
 
 FROM scratch
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

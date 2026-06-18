@@ -12,7 +12,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.2";
+        version = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./internal/version/VERSION);
         reelsieve = pkgs.buildGo126Module {
           pname = "reelsieve";
           inherit version;
@@ -22,7 +22,6 @@
           ldflags = [
             "-s"
             "-w"
-            "-X main.version=${version}"
           ];
         };
       in

@@ -1,6 +1,6 @@
 import ".shared/common.just"
 
-version := "0.1"
+version := `cat internal/version/VERSION`
 image := "reelsieve:" + version
 
 default:
@@ -10,13 +10,13 @@ test:
     go test ./...
 
 build:
-    go build -trimpath -ldflags="-s -w -X main.version={{ version }}" -o ./bin/reelsieve ./cmd/reelsieve
+    go build -trimpath -ldflags="-s -w" -o ./bin/reelsieve ./cmd/reelsieve
 
 run:
-    go run -ldflags="-X main.version={{ version }}" ./cmd/reelsieve
+    go run ./cmd/reelsieve
 
 docker-build:
-    docker build --build-arg VERSION={{ version }} -t {{ image }} .
+    docker build -t {{ image }} .
 
 docker-run: docker-build
     docker run --rm -p 8080:8080 {{ image }}

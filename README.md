@@ -2,13 +2,14 @@
 
 ReelSieve is a small RSS filtering service for movie feeds. It reads the upstream feed configured by `SOURCE_URL`, keeps items with an IMDB rating of at least `5`, stores fetched item keys in SQLite, removes duplicate movie names, and serves the result as RSS.
 
-Version: `0.2`
+Version: see `internal/version/VERSION`.
 
 ## Run
 
 ```sh
-docker build --build-arg VERSION=0.2 -t reelsieve:0.2 .
-docker run --rm -p 8080:8080 -e SOURCE_URL=https://example.com/feed.xml reelsieve:0.2
+VERSION=$(cat internal/version/VERSION)
+docker build -t reelsieve:${VERSION} .
+docker run --rm -p 8080:8080 -e SOURCE_URL=https://example.com/feed.xml reelsieve:${VERSION}
 ```
 
 Open `http://localhost:8080/rss`.

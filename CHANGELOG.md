@@ -3,6 +3,7 @@
 ## 0.2 - 2026-06-18
 
 - Add IMDb search links to filtered RSS item descriptions.
+- Use `internal/version/VERSION` as the single release version source for the app and build tooling.
 - Keep duplicate prevention and rating filtering behavior unchanged.
 
 ## 0.1 - 2026-06-17

@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/pbek/reelsieve/internal/rssfilter"
+	appversion "github.com/pbek/reelsieve/internal/version"
 )
-
-var version = "0.2"
 
 func main() {
 	cfg, err := loadConfig()
@@ -56,7 +55,7 @@ func main() {
 	})
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = fmt.Fprintln(w, version)
+		_, _ = fmt.Fprintln(w, appversion.String())
 	})
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/rss", http.StatusFound)
@@ -71,7 +70,7 @@ func main() {
 	slog.Info(
 		"starting reelsieve",
 		"version",
-		version,
+		appversion.String(),
 		"addr",
 		cfg.listenAddr,
 		"source",
