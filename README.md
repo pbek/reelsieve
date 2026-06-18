@@ -57,3 +57,7 @@ devenv shell
 go test ./...
 SOURCE_URL=https://example.com/feed.xml go run ./cmd/reelsieve
 ```
+
+## Release
+
+Update `internal/version/VERSION` and `CHANGELOG.md`, then push to the `release` branch. The release workflow publishes the container image, creates the matching `vX.Y` git tag, and uses GoReleaser to publish a GitHub Release with the matching changelog entry as release notes.
