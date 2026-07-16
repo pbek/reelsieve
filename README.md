@@ -21,6 +21,7 @@ Open `http://localhost:8080/rss`.
 | `LISTEN_ADDR`           | `:8080`             | HTTP listen address                                        |
 | `SOURCE_URL`            | required            | Upstream RSS URL                                           |
 | `MIN_RATING`            | `5`                 | Minimum IMDB rating                                        |
+| `HIGHLIGHT_RATING`      | `7`                 | Minimum IMDB rating to render bold red                     |
 | `CACHE_TTL`             | `10m`               | In-memory feed cache duration                              |
 | `REQUEST_TIMEOUT`       | `10s`               | Upstream request timeout                                   |
 | `FETCHED_ITEMS_DB_PATH` | `reelsieve.sqlite3` | SQLite database path for fetched item history              |

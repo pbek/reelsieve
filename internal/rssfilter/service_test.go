@@ -42,6 +42,37 @@ func TestFilterItems(t *testing.T) {
 	) {
 		t.Fatalf("description = %q, want IMDb search link", filtered[0].Description)
 	}
+	if strings.Contains(
+		filtered[0].Description,
+		`<strong style="color: red; font-weight: bold;">`,
+	) {
+		t.Fatalf("description = %q, want rating below 7 not highlighted", filtered[0].Description)
+	}
+	if !strings.Contains(
+		filtered[1].Description,
+		`IMDB Rating: <strong style="color: red; font-weight: bold;">7.1/10</strong>`,
+	) {
+		t.Fatalf("description = %q, want highlighted IMDb rating", filtered[1].Description)
+	}
+}
+
+func TestHighlightIMDBRating(t *testing.T) {
+	description := HighlightIMDBRating("IMDB Rating: 7.0/10<br />Genre: Thriller", 7, 7)
+	want := `IMDB Rating: <strong style="color: red; font-weight: bold;">7.0/10</strong><br />Genre: Thriller`
+	if description != want {
+		t.Fatalf("description = %q, want %q", description, want)
+	}
+
+	description = HighlightIMDBRating("IMDB Rating: 6.9/10", 6.9, 7)
+	if description != "IMDB Rating: 6.9/10" {
+		t.Fatalf("description = %q, want unchanged rating below 7", description)
+	}
+
+	description = HighlightIMDBRating("IMDB Rating: 6.5/10", 6.5, 6.5)
+	want = `IMDB Rating: <strong style="color: red; font-weight: bold;">6.5/10</strong>`
+	if description != want {
+		t.Fatalf("description = %q, want configurable highlight threshold", description)
+	}
 }
 
 func TestFilterItemsSkipsStoredItems(t *testing.T) {
@@ -57,7 +88,7 @@ func TestFilterItemsSkipsStoredItems(t *testing.T) {
 		t.Fatalf("RecordFetched: %v", err)
 	}
 
-	service := &Service{minRating: 5, store: store}
+	service := &Service{minRating: 5, highlightRating: 7, store: store}
 	filtered, err := service.filterItems(ctx, []Item{
 		{Title: "Old Movie (2026) [BluRay]", Description: "IMDB Rating: 7.0/10", GUID: "1"},
 		{Title: "New Movie (2026) [1080p]", Description: "IMDB Rating: 7.1/10", GUID: "2"},
@@ -112,9 +143,9 @@ func TestNormalizedName(t *testing.T) {
 func TestAddIMDBSearchLink(t *testing.T) {
 	item := AddIMDBSearchLink(Item{
 		Title:       "Empire of Lies (2026) [1080p] [WEBRip] [x265]",
-		Description: "IMDB Rating: 7.1/10",
+		Description: `IMDB Rating: <strong style="color: red; font-weight: bold;">7.1/10</strong>`,
 	})
-	want := `IMDB Rating: 7.1/10<br />IMDb: <a href="https://www.imdb.com/find/?q=Empire+of+Lies+%282026%29&s=tt">Search IMDb</a>`
+	want := `IMDB Rating: <strong style="color: red; font-weight: bold;">7.1/10</strong><br />IMDb: <a href="https://www.imdb.com/find/?q=Empire+of+Lies+%282026%29&s=tt">Search IMDb</a>`
 	if item.Description != want {
 		t.Fatalf("description = %q, want %q", item.Description, want)
 	}

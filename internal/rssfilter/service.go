@@ -22,12 +22,15 @@ var (
 	spacePattern  = regexp.MustCompile(`\s+`)
 )
 
+const highlightedRatingMinimum = 7.0
+
 type Service struct {
-	client    *http.Client
-	sourceURL string
-	minRating float64
-	cacheTTL  time.Duration
-	store     *ItemStore
+	client          *http.Client
+	sourceURL       string
+	minRating       float64
+	highlightRating float64
+	cacheTTL        time.Duration
+	store           *ItemStore
 
 	mu        sync.RWMutex
 	cached    RSS
@@ -38,15 +41,17 @@ func NewService(
 	client *http.Client,
 	sourceURL string,
 	minRating float64,
+	highlightRating float64,
 	cacheTTL time.Duration,
 	store *ItemStore,
 ) *Service {
 	return &Service{
-		client:    client,
-		sourceURL: sourceURL,
-		minRating: minRating,
-		cacheTTL:  cacheTTL,
-		store:     store,
+		client:          client,
+		sourceURL:       sourceURL,
+		minRating:       minRating,
+		highlightRating: highlightRating,
+		cacheTTL:        cacheTTL,
+		store:           store,
 	}
 }
 
@@ -147,6 +152,7 @@ func (s *Service) filterItems(ctx context.Context, items []Item) ([]Item, error)
 			}
 		}
 		seen[key] = struct{}{}
+		item.Description = HighlightIMDBRating(item.Description, rating, s.highlightRating)
 		item = AddIMDBSearchLink(item)
 		filtered = append(filtered, item)
 	}
@@ -167,10 +173,25 @@ func FilterItems(items []Item, minRating float64) []Item {
 			continue
 		}
 		seen[key] = struct{}{}
+		item.Description = HighlightIMDBRating(item.Description, rating, highlightedRatingMinimum)
 		item = AddIMDBSearchLink(item)
 		filtered = append(filtered, item)
 	}
 	return filtered
+}
+
+func HighlightIMDBRating(description string, rating float64, minimum float64) string {
+	if rating < minimum {
+		return description
+	}
+
+	matches := ratingPattern.FindStringSubmatchIndex(description)
+	if len(matches) != 4 {
+		return description
+	}
+	ratingStart := matches[2]
+	ratingEnd := matches[3] + len("/10")
+	return description[:ratingStart] + `<strong style="color: red; font-weight: bold;">` + description[ratingStart:ratingEnd] + `</strong>` + description[ratingEnd:]
 }
 
 func AddIMDBSearchLink(item Item) Item {

@@ -32,7 +32,14 @@ func main() {
 			slog.Error("failed to close fetched item database", "error", err)
 		}
 	}()
-	service := rssfilter.NewService(client, cfg.sourceURL, cfg.minRating, cfg.cacheTTL, store)
+	service := rssfilter.NewService(
+		client,
+		cfg.sourceURL,
+		cfg.minRating,
+		cfg.highlightRating,
+		cfg.cacheTTL,
+		store,
+	)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /rss", func(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +84,8 @@ func main() {
 		cfg.sourceURL,
 		"min_rating",
 		cfg.minRating,
+		"highlight_rating",
+		cfg.highlightRating,
 		"fetched_items_db",
 		cfg.fetchedItemsDBPath,
 		"fetched_items_limit",
@@ -92,6 +101,7 @@ type config struct {
 	listenAddr         string
 	sourceURL          string
 	minRating          float64
+	highlightRating    float64
 	cacheTTL           time.Duration
 	requestTimeout     time.Duration
 	fetchedItemsDBPath string
@@ -102,6 +112,7 @@ func loadConfig() (config, error) {
 	cfg := config{
 		listenAddr:         getEnv("LISTEN_ADDR", ":8080"),
 		minRating:          5,
+		highlightRating:    7,
 		cacheTTL:           10 * time.Minute,
 		requestTimeout:     10 * time.Second,
 		fetchedItemsDBPath: getEnv("FETCHED_ITEMS_DB_PATH", "reelsieve.sqlite3"),
@@ -119,6 +130,13 @@ func loadConfig() (config, error) {
 			return cfg, fmt.Errorf("MIN_RATING: %w", err)
 		}
 		cfg.minRating = parsed
+	}
+	if value := os.Getenv("HIGHLIGHT_RATING"); value != "" {
+		parsed, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return cfg, fmt.Errorf("HIGHLIGHT_RATING: %w", err)
+		}
+		cfg.highlightRating = parsed
 	}
 	if value := os.Getenv("CACHE_TTL"); value != "" {
 		parsed, err := time.ParseDuration(value)
